@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sudoku Game</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <main class="app-shell">
+    <header class="top-bar">
+      <div>
+        <p class="eyebrow">Sudoku</p>
+        <h1>Sudoku Game</h1>
+      </div>
+      <div class="theme-toggle-wrap">
+        <label for="theme-toggle" class="theme-label">Theme</label>
+        <button id="theme-toggle" type="button" class="theme-toggle" aria-label="Switch to dark mode" aria-pressed="false">Dark Mode</button>
+      </div>
+    </header>
+
+    <section class="game-panel" aria-label="Sudoku game controls">
+      <div class="difficulty-controls">
+        <label for="difficulty-select">Difficulty:</label>
+        <select id="difficulty-select" name="difficulty" aria-label="Select puzzle difficulty">
+          <option value="easy">Easy (45 clues)</option>
+          <option value="medium" selected>Medium (35 clues)</option>
+          <option value="hard">Hard (25 clues)</option>
+        </select>
+        <span id="current-difficulty" aria-live="polite">Current difficulty: Medium</span>
+      </div>
+
+      <div id="sudoku-board" aria-label="Sudoku board" role="grid"></div>
+
+      <div class="controls" aria-label="Game actions">
+        <button id="new-game" type="button">New Game</button>
+        <button id="check-solution" type="button">Check Solution</button>
+        <button id="hint-button" type="button">Hint</button>
+        <span id="timer" class="timer" aria-live="polite">Time: 00:00</span>
+        <span id="message" aria-live="polite"></span>
+      </div>
+    </section>
+
+    <section class="scoreboard-panel" aria-labelledby="scoreboard-heading">
+      <h2 id="scoreboard-heading">Top 10 Fastest Times</h2>
+      <table class="scoreboard-table">
+        <thead>
+          <tr>
+            <th scope="col">#</th>
+            <th scope="col">Name</th>
+            <th scope="col">Time</th>
+            <th scope="col">Difficulty</th>
+          </tr>
+        </thead>
+        <tbody id="scoreboard-body"></tbody>
+      </table>
+      <p id="scoreboard-empty" class="empty-state">No scores yet.</p>
+    </section>
+  </main>
+
+  <script src="/static/main.js"></script>
+</body>
+</html>
