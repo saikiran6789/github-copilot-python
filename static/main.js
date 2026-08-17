@@ -18,6 +18,7 @@ let timerInterval = null;
 let gameStartedAt = 0;
 let gameSolved = false;
 let scoreSavedForCurrentGame = false;
+let hintsUsed = 0;
 
 
 // --------------------------------------------------
@@ -449,7 +450,10 @@ function getStoredScores() {
           entry.difficulty,
 
         timeSeconds:
-          Number(entry.timeSeconds)
+          Number(entry.timeSeconds),
+        
+        hintsUsed:
+          Number.isFinite(entry.hintsUsed) ? entry.hintsUsed : 0
       }));
 
   } catch (error) {
@@ -531,6 +535,7 @@ function renderScoreboard() {
       <td>${score.name}</td>
       <td>${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}</td>
       <td>${score.difficulty}</td>
+      <td>${score.hintsUsed || 0}</td>
     `;
 
     tableBody.appendChild(row);
@@ -570,7 +575,10 @@ function recordSolvedGame() {
       ).value,
 
     timeSeconds:
-      elapsedSeconds
+      elapsedSeconds,
+    
+    hintsUsed:
+      hintsUsed
   });
 
   scores.sort(
@@ -671,6 +679,11 @@ async function applyHint() {
       return;
     }
 
+    // Update hints used counter from server response
+    if (Number.isFinite(data.hints_used)) {
+      hintsUsed = data.hints_used;
+    }
+
     const boardDiv =
       document.getElementById(
         'sudoku-board'
@@ -697,7 +710,6 @@ async function applyHint() {
 
     input.value = data.value;
     input.disabled = true;
-
     input.dataset.hinted = 'true';
 
     input.className =
@@ -706,7 +718,7 @@ async function applyHint() {
     msg.style.color = '#1f7a1f';
 
     msg.innerText =
-      'Hint used!';
+      `Hint used! (${hintsUsed} total)`;
 
   } catch (error) {
 
@@ -733,6 +745,7 @@ async function newGame() {
 
   gameSolved = false;
   scoreSavedForCurrentGame = false;
+  hintsUsed = 0;
 
   const clues =
     getSelectedClues();

@@ -100,3 +100,42 @@ def test_generate_puzzle_returns_valid_solution_and_puzzle():
     for row_index, row in enumerate(puzzle):
         for col_index, value in enumerate(row):
             assert value == 0 or value == solution[row_index][col_index]
+
+
+@pytest.mark.parametrize('difficulty_clues', [45, 35, 25])
+def test_multiple_puzzles_at_each_difficulty_have_unique_solution(difficulty_clues):
+    """Generate 5 puzzles at each difficulty level and verify each has exactly one solution."""
+    for seed in range(5):
+        random.seed(seed)
+        puzzle, solution = sudoku_logic.generate_puzzle(clues=difficulty_clues)
+        
+        solution_count = count_solutions(puzzle, limit=2)
+        assert solution_count == 1, \
+            f"Puzzle with {difficulty_clues} clues (seed {seed}) has {solution_count} solutions"
+
+
+def test_easy_puzzles_have_exactly_one_solution():
+    """Generate 3 Easy (45 clue) puzzles and verify uniqueness."""
+    for seed in range(3):
+        random.seed(seed)
+        puzzle, _ = sudoku_logic.generate_puzzle(clues=45)
+        assert count_solutions(puzzle, limit=2) == 1
+        assert sum(cell == 0 for row in puzzle for cell in row) == 36  # 81 - 45
+
+
+def test_medium_puzzles_have_exactly_one_solution():
+    """Generate 3 Medium (35 clue) puzzles and verify uniqueness."""
+    for seed in range(3):
+        random.seed(seed)
+        puzzle, _ = sudoku_logic.generate_puzzle(clues=35)
+        assert count_solutions(puzzle, limit=2) == 1
+        assert sum(cell == 0 for row in puzzle for cell in row) == 46  # 81 - 35
+
+
+def test_hard_puzzles_have_exactly_one_solution():
+    """Generate 3 Hard (25 clue) puzzles and verify uniqueness."""
+    for seed in range(3):
+        random.seed(seed)
+        puzzle, _ = sudoku_logic.generate_puzzle(clues=25)
+        assert count_solutions(puzzle, limit=2) == 1
+        assert sum(cell == 0 for row in puzzle for cell in row) == 56  # 81 - 25
