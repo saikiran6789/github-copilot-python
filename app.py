@@ -180,7 +180,8 @@ def abandon_puzzle():
 @app.route("/api/puzzles/current/hint", methods=["POST"])
 def get_hint():
     """Return one correct value for an empty cell without exposing the solution.
-    Increments the hints-used counter on the server.
+    Each hinted cell is recorded in the server-side puzzle so the next hint
+    advances to another empty cell.
     """
     game_id, game = _get_active_game()
 
@@ -192,25 +193,28 @@ def get_hint():
     puzzle = game["puzzle"]
     solution = game["solution"]
 
-    # Find the first empty cell
+    # Find the first cell that is still empty.
     for row in range(9):
         for col in range(9):
             if puzzle[row][col] == 0:
-                # Increment hints used on the server
+                value = solution[row][col]
+
+                # Record the hint in the server-side game state.
+                puzzle[row][col] = value
+
+                # Track how many hints have been used.
                 game["hints_used"] = game.get("hints_used", 0) + 1
-                
+
                 return jsonify({
                     "row": row,
                     "col": col,
-                    "value": solution[row][col],
+                    "value": value,
                     "hints_used": game["hints_used"],
                 })
 
     return jsonify({
         "error": "no empty cells remain"
     }), 400
-
-
 
 
 if __name__ == "__main__":
