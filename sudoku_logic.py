@@ -2,6 +2,7 @@ import copy
 import random
 
 SIZE = 9
+BOX_SIZE = 3
 EMPTY = 0
 
 
@@ -10,106 +11,187 @@ def deep_copy(board):
 
 
 def create_empty_board():
-    return [[EMPTY for _ in range(SIZE)] for _ in range(SIZE)]
+    return [[EMPTY] * SIZE for _ in range(SIZE)]
+
+
+def row_values(board, row):
+    return set(board[row])
+
+
+def column_values(board, col):
+    return {board[row][col] for row in range(SIZE)}
+
+
+def box_values(board, row, col):
+    top = (row // BOX_SIZE) * BOX_SIZE
+    left = (col // BOX_SIZE) * BOX_SIZE
+
+    return {
+        board[r][c]
+        for r in range(top, top + BOX_SIZE)
+        for c in range(left, left + BOX_SIZE)
+    }
+
+
+def available_numbers(board, row, col):
+    used = (
+        row_values(board, row)
+        | column_values(board, col)
+        | box_values(board, row, col)
+    )
+
+    return [
+        value
+        for value in range(1, SIZE + 1)
+        if value not in used
+    ]
 
 
 def is_safe(board, row, col, num):
-    # Check row and column
-    for x in range(SIZE):
-        if board[row][x] == num or board[x][col] == num:
-            return False
-    # Check 3x3 box
-    start_row = row - row % 3
-    start_col = col - col % 3
-    for i in range(3):
-        for j in range(3):
-            if board[start_row + i][start_col + j] == num:
-                return False
-    return True
+    if board[row][col] not in (EMPTY, num):
+        return False
+
+    return num in available_numbers(board, row, col)
 
 
-def count_solutions(board, limit=2):
-    """Count valid Sudoku completions up to a limit.
+def find_empty_cell(board):
+    """Return the empty cell with the fewest possible values."""
+    best_cell = None
+    best_candidates = None
 
-    The helper stops as soon as it finds the requested number of solutions so it
-    can distinguish between zero, one, and multiple valid completions.
-    """
-    board = deep_copy(board)
+    for row in range(SIZE):
+        for col in range(SIZE):
+            if board[row][col] != EMPTY:
+                continue
 
-    def backtrack():
-        for row in range(SIZE):
-            for col in range(SIZE):
-                if board[row][col] == EMPTY:
-                    total = 0
-                    for num in range(1, SIZE + 1):
-                        if is_safe(board, row, col, num):
-                            board[row][col] = num
-                            total += backtrack()
-                            if total >= limit:
-                                board[row][col] = EMPTY
-                                return total
-                            board[row][col] = EMPTY
-                    return total
-        return 1
+            candidates = available_numbers(board, row, col)
 
-    return backtrack()
+            if not candidates:
+                return row, col, []
+
+            if best_candidates is None or len(candidates) < len(best_candidates):
+                best_cell = (row, col)
+                best_candidates = candidates
+
+                if len(candidates) == 1:
+                    return row, col, candidates
+
+    if best_cell is None:
+        return None
+
+    return best_cell[0], best_cell[1], best_candidates
 
 
 def fill_board(board):
-    for row in range(SIZE):
-        for col in range(SIZE):
-            if board[row][col] == EMPTY:
-                possible = list(range(1, SIZE + 1))
-                random.shuffle(possible)
-                for candidate in possible:
-                    if is_safe(board, row, col, candidate):
-                        board[row][col] = candidate
-                        if fill_board(board):
-                            return True
-                        board[row][col] = EMPTY
-                return False
-    return True
+    cell = find_empty_cell(board)
+
+    if cell is None:
+        return True
+
+    row, col, candidates = cell
+
+    random.shuffle(candidates)
+
+    for value in candidates:
+        board[row][col] = value
+
+        if fill_board(board):
+            return True
+
+        board[row][col] = EMPTY
+
+    return False
+
+
+def count_solutions(board, limit=2):
+    working = deep_copy(board)
+    found = 0
+
+    def search():
+        nonlocal found
+
+        if found >= limit:
+            return
+
+        cell = find_empty_cell(working)
+
+        if cell is None:
+            found += 1
+            return
+
+        row, col, candidates = cell
+
+        for value in candidates:
+            working[row][col] = value
+            search()
+            working[row][col] = EMPTY
+
+            if found >= limit:
+                return
+
+    search()
+    return found
 
 
 def remove_cells(board, clues):
-    target_empty_cells = SIZE * SIZE - clues
-    cells = [(row, col) for row in range(SIZE) for col in range(SIZE)]
-    random.shuffle(cells)
+    target_empty = SIZE * SIZE - clues
 
-    for row, col in cells:
-        if sum(cell == EMPTY for row_values in board for cell in row_values) >= target_empty_cells:
+    positions = [
+        (row, col)
+        for row in range(SIZE)
+        for col in range(SIZE)
+    ]
+    random.shuffle(positions)
+
+    removed = 0
+
+    for row, col in positions:
+        if removed >= target_empty:
             break
-        if board[row][col] == EMPTY:
+
+        previous = board[row][col]
+
+        if previous == EMPTY:
             continue
 
-        original_value = board[row][col]
         board[row][col] = EMPTY
-        if count_solutions(board, limit=2) != 1:
-            board[row][col] = original_value
+
+        if count_solutions(board, limit=2) == 1:
+            removed += 1
+        else:
+            board[row][col] = previous
 
     return board
 
 
 def generate_puzzle(clues=35):
     if not 1 <= clues <= SIZE * SIZE:
-        raise ValueError(f'clues must be between 1 and {SIZE * SIZE}.')
+        raise ValueError(
+            f"clues must be between 1 and {SIZE * SIZE}."
+        )
 
-    target_empty_cells = SIZE * SIZE - clues
-    max_retries = 100
+    required_empty = SIZE * SIZE - clues
 
-    for _ in range(max_retries):
-        board = create_empty_board()
-        if not fill_board(board):
+    for _ in range(100):
+        completed = create_empty_board()
+
+        if not fill_board(completed):
             continue
 
-        solution = deep_copy(board)
-        puzzle = deep_copy(board)
+        solution = deep_copy(completed)
+        puzzle = deep_copy(completed)
+
         remove_cells(puzzle, clues)
 
-        if sum(cell == EMPTY for row_values in puzzle for cell in row_values) == target_empty_cells:
-            if count_solutions(puzzle, limit=2) == 1:
-                return puzzle, solution
+        empty_count = sum(
+            value == EMPTY
+            for row in puzzle
+            for value in row
+        )
+
+        if empty_count == required_empty and count_solutions(puzzle, 2) == 1:
+            return puzzle, solution
 
     raise RuntimeError(
-        f'Unable to generate a unique puzzle with {clues} clues after {max_retries} attempts.'
+        f"Unable to generate a unique puzzle with {clues} clues."
     )
